@@ -19,7 +19,7 @@ class AltguessPlugin(b3.plugin.Plugin):
 
 	def cmd_altguess(self, data, client, cmd = None):
 		"""\
-		<player> all - Guesses alternate ID's for a given player. Returns maximum 10 of each type of result is all is not specified
+		<player> <threshold> all - Guesses alternate ID's for a given player. Threshold = uncertain guess precision (lower = more precise). Returns maximum 10 of each type of result is all is not specified
 		"""
 		if data:
 			input = self._admin.parseUserCmd(data)
@@ -32,11 +32,27 @@ class AltguessPlugin(b3.plugin.Plugin):
 		if not t:
 			return
 
-		getAll = False
-		if input[1] == "all":
-			getAll = True
+		iParts = input[1].split()
 
-		aliases = sorted(t.getAliases(), key = lambda x: x.numUsed, reverse=True)[:2]
+		threshold = 2
+		try:
+			threshold = int(iParts[0])
+		except ValueError:
+			client.message("Invalid threshold specified. Defaulting to 2.")
+		except IndexError:
+			pass
+
+		getAll = False
+		try:
+			if iParts[1] == "all":
+				getAll = True
+		except IndexError:
+			pass
+
+		self.verbose(threshold)
+		self.verbose(getAll)
+
+		aliases = sorted(t.getAliases(), key = lambda x: x.numUsed, reverse=True)[:threshold]
 
 		validAliases = []
 
