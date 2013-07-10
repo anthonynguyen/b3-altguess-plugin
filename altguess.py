@@ -32,25 +32,23 @@ class AltguessPlugin(b3.plugin.Plugin):
 		if not t:
 			return
 
-		iParts = input[1].split()
-
 		threshold = 2
-		try:
-			threshold = int(iParts[0])
-		except ValueError:
-			client.message("Invalid threshold specified. Defaulting to 2.")
-		except IndexError:
-			pass
-
 		getAll = False
-		try:
-			if iParts[1] == "all":
-				getAll = True
-		except IndexError:
-			pass
 
-		self.verbose(threshold)
-		self.verbose(getAll)
+		if input[1]:
+			iParts = input[1].split()
+			try:
+				threshold = int(iParts[0])
+			except ValueError:
+				client.message("Invalid threshold specified. Defaulting to 2.")
+			except IndexError:
+				pass
+
+			try:
+				if iParts[1] == "all":
+					getAll = True
+			except IndexError:
+				pass
 
 		aliases = sorted(t.getAliases(), key = lambda x: x.numUsed, reverse=True)[:threshold]
 
