@@ -19,7 +19,7 @@ class AltguessPlugin(b3.plugin.Plugin):
 
 	def cmd_altguess(self, data, client, cmd = None):
 		"""\
-		<player> all - Guesses alternate ID's for a given player. Returns 20 results if all is not specified
+		<player> all - Guesses alternate ID's for a given player. Returns maximum 10 of each type of result is all is not specified
 		"""
 		if data:
 			input = self._admin.parseUserCmd(data)
@@ -45,11 +45,8 @@ class AltguessPlugin(b3.plugin.Plugin):
 		if t.name not in self.blacklist:
 			validAliases.append(t.name)
 
-		if not validAliases:
-			client.message("That person's name(s) is(are) too generic, sorry.")
-			return
-
-		validAliases = [va.replace("'", "\.") for va in validAliases]
+		if validAliases:
+			validAliases = [va.replace("'", "\.") for va in validAliases]
 
 		ipAliases = []
 		ipAliases.append(t.ip)
@@ -57,7 +54,8 @@ class AltguessPlugin(b3.plugin.Plugin):
 		for ip in t.getIpAddresses():
 			ipAliases.append(ip.ip)
 
-		candidates = []
+		ccandidates = []
+		ucandidates = []
 
 		fullIpA = "', '".join([str(x) for x in ipAliases])
 		q = "SELECT * FROM ipaliases WHERE ip in ('{0}')".format(fullIpA)
@@ -65,7 +63,7 @@ class AltguessPlugin(b3.plugin.Plugin):
 		if c.rowcount > 0:
 			while not c.EOF:
 				r  = c.getRow()
-				candidates.append(r["client_id"])
+				ccandidates.append(r["client_id"])
 				c.moveNext()
 		c.close()
 
@@ -74,47 +72,80 @@ class AltguessPlugin(b3.plugin.Plugin):
 		if c.rowcount > 0:
 			while not c.EOF:
 				r  = c.getRow()
-				candidates.append(r["id"])
+				ccandidates.append(r["id"])
 				c.moveNext()
 		c.close()
 
-		fullA = "', '".join(validAliases)
-		q = "SELECT * FROM aliases WHERE alias in ('{0}')".format(fullA)
-		c = self.console.storage.query(q)
-		if c.rowcount > 0:
-			while not c.EOF:
-				r  = c.getRow()
-				candidates.append(r["client_id"])
-				c.moveNext()
-		c.close()
+		if validAliases:
+			fullA = "', '".join(validAliases)
+			q = "SELECT * FROM aliases WHERE alias in ('{0}')".format(fullA)
+			c = self.console.storage.query(q)
+			if c.rowcount > 0:
+				while not c.EOF:
+					r  = c.getRow()
+					ucandidates.append(r["client_id"])
+					c.moveNext()
+			c.close()
 
-		q = "SELECT * FROM clients WHERE name in ('{0}')".format(fullA)
-		c = self.console.storage.query(q)
-		if c.rowcount > 0:
-			while not c.EOF:
-				r  = c.getRow()
-				candidates.append(r["id"])
-				c.moveNext()
-		c.close()
+			q = "SELECT * FROM clients WHERE name in ('{0}')".format(fullA)
+			c = self.console.storage.query(q)
+			if c.rowcount > 0:
+				while not c.EOF:
+					r  = c.getRow()
+					ucandidates.append(r["id"])
+					c.moveNext()
+			c.close()
+			ucandidates = [str(c) for c in sorted(list(set(ucandidates))) if c != t.id]
 
-		candidates = [str(c) for c in sorted(list(set(candidates))) if c != t.id]
-
-		if not candidates:
-			client.message("No possible alternates found for ^2{0}^7(^1{1}^7).".format(t.name, t.id))
-			return
+		ccandidates = [str(c) for c in sorted(list(set(ccandidates))) if c != t.id]
 
 		if not getAll:
-			candidates = candidates[:20]
+			ccandidates = ccandidates[:10]
+			ucandidates = ucandidates[:10]
 
-		output = []
+		coutput = []
+		uoutput = []
 
-		q = "SELECT * FROM clients WHERE id in ('{0}')".format("', '".join(candidates))
-		c = self.console.storage.query(q)
-		if c.rowcount > 0:
-			while not c.EOF:
-				r  = c.getRow()
-				output.append("^2{0}^7(^1@{1}^7)".format(r["name"], r["id"]))
-				c.moveNext()
-		c.close()
+		nC = False
+		nU = False
 
-		client.message("Possible aliases for ^2{0}^7(^1@{1}^7): {2}".format(t.name, str(t.id), ", ".join(output)))
+		if ccandidates:
+			q = "SELECT * FROM clients WHERE id in ('{0}')".format("', '".join(ccandidates))
+			c = self.console.storage.query(q)
+			if c.rowcount > 0:
+				while not c.EOF:
+					r  = c.getRow()
+					coutput.append("^2{0}^7(^1@{1}^7)".format(r["name"], r["id"]))
+					c.moveNext()
+			c.close()
+		else:
+			nD = True
+
+		for uc in ucandidates:
+				if uc in ccandidates:
+					ucandidates.remove(uc)
+
+		if ucandidates:
+			q = "SELECT * FROM clients WHERE id in ('{0}')".format("', '".join(ucandidates))
+			c = self.console.storage.query(q)
+			if c.rowcount > 0:
+				while not c.EOF:
+					r  = c.getRow()
+					uoutput.append("^2{0}^7(^1@{1}^7)".format(r["name"], r["id"]))
+					c.moveNext()
+			c.close()
+		else:
+			nU = True
+		
+		if not nC:
+			client.message("Certain alternates for ^2{0}^7(^1@{1}^7): {2}".format(t.name, str(t.id), ", ".join(coutput)))
+		else:
+			client.message("No certain alternates found for ^2{0}^7(^1{1}^7).".format(t.name, t.id))
+		
+		if not nU:
+			client.message("Uncertain alternates for ^2{0}^7(^1@{1}^7): {2}".format(t.name, str(t.id), ", ".join(uoutput)))
+		else:
+			if not validAliases:
+				client.message("No uncertain alternates found for ^2{0}^7(^1{1}^7) because their name(s) is(are) too generic.".format(t.name, t.id))
+			else:
+				client.message("No uncertain alternates found for ^2{0}^7(^1{1}^7).".format(t.name, t.id))
