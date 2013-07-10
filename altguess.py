@@ -33,9 +33,11 @@ class AltguessPlugin(b3.plugin.Plugin):
 			return
 
 		getAll = False
-		if input[1] == "all": getAll = True
+		if input[1] == "all":
+			getAll = True
 
-		aliases = t.getAliases()
+		aliases = sorted(t.getAliases(), key = lambda x: x.numUsed, reverse=True)[:2]
+
 		validAliases = []
 
 		for a in aliases:
@@ -121,12 +123,13 @@ class AltguessPlugin(b3.plugin.Plugin):
 		else:
 			nD = True
 
+		uucandidates = []
 		for uc in ucandidates:
-				if uc in ccandidates:
-					ucandidates.remove(uc)
+			if uc not in ccandidates:
+				uucandidates.append(uc)
 
-		if ucandidates:
-			q = "SELECT * FROM clients WHERE id in ('{0}')".format("', '".join(ucandidates))
+		if uucandidates:
+			q = "SELECT * FROM clients WHERE id in ('{0}')".format("', '".join(uucandidates))
 			c = self.console.storage.query(q)
 			if c.rowcount > 0:
 				while not c.EOF:
@@ -140,12 +143,12 @@ class AltguessPlugin(b3.plugin.Plugin):
 		if not nC:
 			client.message("Certain alternates for ^2{0}^7(^1@{1}^7): {2}".format(t.name, str(t.id), ", ".join(coutput)))
 		else:
-			client.message("No certain alternates found for ^2{0}^7(^1{1}^7).".format(t.name, t.id))
+			client.message("No certain alternates found for ^2{0}^7(^1@{1}^7).".format(t.name, t.id))
 		
 		if not nU:
 			client.message("Uncertain alternates for ^2{0}^7(^1@{1}^7): {2}".format(t.name, str(t.id), ", ".join(uoutput)))
 		else:
 			if not validAliases:
-				client.message("No uncertain alternates found for ^2{0}^7(^1{1}^7) because their name(s) is(are) too generic.".format(t.name, t.id))
+				client.message("No uncertain alternates found for ^2{0}^7(^1@{1}^7) because their name(s) is(are) too generic.".format(t.name, t.id))
 			else:
-				client.message("No uncertain alternates found for ^2{0}^7(^1{1}^7).".format(t.name, t.id))
+				client.message("No uncertain alternates found for ^2{0}^7(^1@{1}^7).".format(t.name, t.id))
