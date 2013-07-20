@@ -24,7 +24,7 @@ class AltguessPlugin(b3.plugin.Plugin):
 		if data:
 			input = self._admin.parseUserCmd(data)
 		if not data:
-			self.client.message("Enter a player to search for alternate ID's")
+			client.message("Enter a player to search for alternate ID's")
 			return
 
 		t = self._admin.findClientPrompt(input[0], client)
